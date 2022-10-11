@@ -48,7 +48,7 @@ protected:
 protected:
   /// @{
   std::string body_ = ""; ///< Name of robot's freeflyer
-  mc_rbdyn::Robots robots_; ///< Store robot estimated state
+  std::shared_ptr<mc_rbdyn::Robots> robots_;
   /// @}
 
   /// @{

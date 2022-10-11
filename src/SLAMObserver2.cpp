@@ -42,7 +42,7 @@ void SLAMObserver2::configure(const mc_control::MCController & ctl, const mc_rtc
   if(config.has("Robot"))
   {
     body_ = ctl.robot(robot_).mb().bodies()[0].name();
-    robots_.load({ctl.robot(robot_).module()});
+    robots_->load({ctl.robot(robot_).module()});
   }
 
   if(config.has("SLAM"))
@@ -64,7 +64,7 @@ void SLAMObserver2::configure(const mc_control::MCController & ctl, const mc_rtc
     extraRobotsName_ = config("ExtraRobots");
     for(const auto & name : extraRobotsName_)
     {
-      robots_.load(name, ctl.robot(name).module());
+      robots_->load(name, ctl.robot(name).module());
     }
   }
 
@@ -115,11 +115,11 @@ bool SLAMObserver2::run(const mc_control::MCController & ctl)
       const_cast<mc_control::MCController &>(ctl).datastore().remove("SLAM::Robot");
       const_cast<mc_control::MCController &>(ctl).datastore().remove("SLAM::X_S_Ground");
 
-      for(size_t i = 0; i < robots_.robots().size(); ++i)
+      for(size_t i = 0; i < robots_->robots().size(); ++i)
       {
-        if(i != robots_.robotIndex())
+        if(i != robots_->robotIndex())
         {
-          const_cast<mc_control::MCController &>(ctl).datastore().remove(robots_.robots()[i].name()+"::X_S_Object");
+          const_cast<mc_control::MCController &>(ctl).datastore().remove(robots_->robots()[i].name()+"::X_S_Object");
         }
       }
     }
@@ -131,16 +131,16 @@ bool SLAMObserver2::run(const mc_control::MCController & ctl)
     isEstimatorAlive_ = true;
 
     const_cast<mc_control::MCController &>(ctl).datastore().make_call(
-        "SLAM::Robot", [this]() -> const mc_rbdyn::Robot & { return robots_.robot(); });
+        "SLAM::Robot", [this]() -> const mc_rbdyn::Robot & { return robots_->robot(); });
     const_cast<mc_control::MCController &>(ctl).datastore().make_call(
         "SLAM::X_S_Ground", [this]() -> const sva::PTransformd & { return X_Slam_Ground_.pose; });
 
-    for(size_t i = 0; i < robots_.robots().size(); ++i)
+    for(size_t i = 0; i < robots_->robots().size(); ++i)
     {
-      if(i != robots_.robotIndex())
+      if(i != robots_->robotIndex())
       {
         const_cast<mc_control::MCController &>(ctl).datastore().make_call(
-          robots_.robots()[i].name()+"::X_S_Object", [this, i]() -> const sva::PTransformd & { return robots_.robots()[i].posW(); });
+          robots_->robots()[i].name()+"::X_S_Object", [this, i]() -> const sva::PTransformd & { return robots_->robots()[i].posW(); });
       }
     }
   }
@@ -175,13 +175,13 @@ void SLAMObserver2::update(mc_control::MCController & ctl)
   {
     isNewEstimatedPose_ = false;
 
-    auto & main_robot = robots_.robot();
+    auto & main_robot = robots_->robot();
     main_robot.mbc().q = q();
     const sva::PTransformd robot_posW =
         freeflyer() * camera().inv() * (isFiltered_ ? estimatedPoseFiltered_ : estimatedPose_);
     main_robot.posW(robot_posW);
 
-    for(auto & robot : robots_)
+    for(auto & robot : *robots_)
     {
       if(ctl.datastore().has(robot.name()+"::X_C_Object"))
       {
@@ -202,18 +202,18 @@ void SLAMObserver2::addToLogger(const mc_control::MCController & ctl,
                                 const std::string & category)
 {
   VisionBasedObserver::addToLogger(ctl, logger, category);
-  logger.addLogEntry(category + "_LeftFootCenter", [this]() { return robots_.robot().surfacePose("LeftFootCenter"); });
+  logger.addLogEntry(category + "_LeftFootCenter", [this]() { return robots_->robot().surfacePose("LeftFootCenter"); });
   logger.addLogEntry(category + "_RightFootCenter",
-                     [this]() { return robots_.robot().surfacePose("RightFootCenter"); });
-  logger.addLogEntry(category + "_InternLeftHand", [this]() { return robots_.robot().surfacePose("InternLeftHand"); });
+                     [this]() { return robots_->robot().surfacePose("RightFootCenter"); });
+  logger.addLogEntry(category + "_InternLeftHand", [this]() { return robots_->robot().surfacePose("InternLeftHand"); });
   logger.addLogEntry(category + "_InternRightHand",
-                     [this]() { return robots_.robot().surfacePose("InternRightHand"); });
-  logger.addLogEntry(category + "_com", [this]() { return robots_.robot().com(); });
+                     [this]() { return robots_->robot().surfacePose("InternRightHand"); });
+  logger.addLogEntry(category + "_com", [this]() { return robots_->robot().com(); });
 
-  for(auto & robot : robots_)
+  for(auto & robot : *robots_)
   {
     const std::string & name = robot.name();
-    logger.addLogEntry(category + "_posW_" + name, [this, name]() { return robots_.robot(name).posW(); });
+    logger.addLogEntry(category + "_posW_" + name, [this, name]() { return robots_->robot(name).posW(); });
   }
 }
 
@@ -224,7 +224,7 @@ void SLAMObserver2::removeFromLogger(mc_rtc::Logger & logger, const std::string 
   logger.removeLogEntry(category + "_RightFootCenter");
   logger.removeLogEntry(category + "_com");
 
-  for(auto & robot : robots_)
+  for(auto & robot : *robots_)
   {
     logger.removeLogEntry(category + "_posW_" + robot.name());
   }
