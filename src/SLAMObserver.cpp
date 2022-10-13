@@ -67,7 +67,7 @@ void SLAMObserver::configure(const mc_control::MCController & ctl, const mc_rtc:
       mc_rtc::log::error_and_throw<std::runtime_error>("No {} body found in {}", camera_, robot_);
     }
     body_ = ctl.robot(robot_).mb().bodies()[0].name();
-    robots_->load({ctl.robot(robot_).module()});
+    robots_ = mc_rbdyn::loadRobot(ctl.robot(robot_).module());
   }
   else
   {

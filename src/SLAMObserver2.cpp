@@ -42,7 +42,7 @@ void SLAMObserver2::configure(const mc_control::MCController & ctl, const mc_rtc
   if(config.has("Robot"))
   {
     body_ = ctl.robot(robot_).mb().bodies()[0].name();
-    robots_->load({ctl.robot(robot_).module()});
+    robots_ = mc_rbdyn::loadRobot(ctl.robot(robot_).module());
   }
 
   if(config.has("SLAM"))
